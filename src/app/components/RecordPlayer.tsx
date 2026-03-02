@@ -14,7 +14,7 @@ interface RecordPlayerProps {
   isPlaying: boolean;
   onSongSelect: (index: number) => void;
   onTogglePlayPause: () => void;
-  onStop: () => void;   // 👈 added
+  onStop: () => void;
 }
 
 export function RecordPlayer({
@@ -27,18 +27,13 @@ export function RecordPlayer({
   onStop
 }: RecordPlayerProps) {
 
-  const handleClose = () => {
-    onStop();       // stop music when closing
-    onClose();
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-      onClick={handleClose}
+      onClick={onClose}   // ✅ JUST CLOSE — DO NOT STOP
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
@@ -54,20 +49,12 @@ export function RecordPlayer({
           Choose Your Melody
         </h2>
 
-        {/* ALWAYS SHOW SONG LIST (Better UX) */}
+        {/* Song List */}
         <div className="space-y-3 mb-6">
           {songs.map((song, index) => (
             <button
               key={index}
-              onClick={() => {
-                if (selectedSong === index) {
-                  // reselect same song → reset cleanly
-                  onStop();
-                  setTimeout(() => onSongSelect(index), 50);
-                } else {
-                  onSongSelect(index);
-                }
-              }}
+              onClick={() => onSongSelect(index)}
               className={`w-full p-3 rounded-md transition-colors border-2 
                 ${selectedSong === index
                   ? 'bg-[#c4b498] border-[#5a4a3a]'
@@ -85,7 +72,7 @@ export function RecordPlayer({
           ))}
         </div>
 
-        {/* CURRENTLY PLAYING SECTION */}
+        {/* Playing Section */}
         {selectedSong !== null && (
           <div className="text-center">
 
@@ -98,7 +85,7 @@ export function RecordPlayer({
               </h3>
             </div>
 
-            {/* Animated Music Icons */}
+            {/* Animated Icons */}
             <div className="flex justify-center gap-2 mb-4 h-10">
               {isPlaying &&
                 [...Array(4)].map((_, i) => (
@@ -137,9 +124,8 @@ export function RecordPlayer({
           </div>
         )}
 
-        {/* Close */}
         <button
-          onClick={handleClose}
+          onClick={onClose}
           className="mt-6 w-full py-2 text-[#7a6a5a] hover:text-[#5a4a3a]"
           style={{ fontFamily: 'Georgia, serif' }}
         >

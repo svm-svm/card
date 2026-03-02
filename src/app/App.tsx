@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { RecordPlayer } from './components/RecordPlayer';
 import { PhotoCarousel } from './components/PhotoCarousel';
@@ -7,8 +7,8 @@ import { ClockMessage } from './components/ClockMessage';
 import { HangingPhotos } from './components/HangingPhotos';
 
 import vintageRoomImage from '../assets/ChatGPT Image Mar 2, 2026, 12_11_54 PM.png';
-import song1 from '../assets/music/extracted-audio (1).mp3';
-import song2 from '../assets/music/extracted-audio.mp3';
+import song1 from '../assets/music/song1.mp3';
+import song2 from '../assets/music/song2.mp3';
 
 export default function App() {
 
@@ -28,20 +28,27 @@ export default function App() {
   /* ---------------- AUDIO CONTROL ---------------- */
 
   const handleSongSelect = (index: number) => {
+    if (!audioRef.current) return;
 
-    // stop previous audio cleanly
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    // Stop previous
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+
+    // Set source BEFORE playing
+    audioRef.current.src = songs[index].url;
 
     setSelectedSong(index);
     setIsPlaying(true);
     setNoteSeed(prev => prev + 1);
 
-    setTimeout(() => {
-      audioRef.current?.play();
-    }, 100);
+    // Play immediately (no timeout, no async)
+    const playPromise = audioRef.current.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(err => {
+        console.log("Playback prevented:", err);
+      });
+    }
   };
 
   const togglePlayPause = () => {
@@ -51,16 +58,20 @@ export default function App() {
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => console.log(err));
+      }
       setIsPlaying(true);
     }
   };
 
   const stopMusic = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    if (!audioRef.current) return;
+
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+
     setIsPlaying(false);
     setSelectedSong(null);
   };
@@ -70,14 +81,16 @@ export default function App() {
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#f5ebe0]">
 
-      {/* 🌙 Ambient Light Flicker */}
+      {/* Ambient Light Flicker */}
       <div className="absolute inset-0 pointer-events-none ambient-flicker" />
 
-      {/* 📦 Intro Notification */}
+      {/* Intro Notification */}
       {showIntro && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#f5f1e8] shadow-xl px-6 py-4 rounded-lg border border-[#8b6f47] z-50">
-          <div className="flex items-center justify-between gap-6">
-            <p className="text-[#5a4a3a]">Happy Belated Birthday!Click on the record player, camera, pen, or clock to interact with this cozy space. Hope you have fun!</p>
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#f5f1e8] shadow-xl px-6 py-4 rounded-lg border border-[#8b6f47] z-50 max-w-xl text-center">
+          <div className="flex items-start justify-between gap-6">
+            <p className="text-[#5a4a3a] text-sm md:text-base">
+              Happy Belated Birthday! Click on the record player, camera, pen, or clock to interact with this cozy space.
+            </p>
             <button
               onClick={() => setShowIntro(false)}
               className="text-[#8b6f47] hover:text-[#5a4a3a]"
@@ -98,7 +111,7 @@ export default function App() {
             className="absolute inset-0 w-full h-full object-contain"
           />
 
-          {/* 🎵 Slow Floating Music Symbols */}
+          {/* Floating Music Symbols */}
           {isPlaying && (
             <div key={noteSeed} className="absolute inset-0 pointer-events-none overflow-hidden">
               {[...Array(8)].map((_, i) => (
@@ -117,7 +130,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ================= HOTSPOTS ================= */}
+        {/* ================= HOTSPOTS ================= */}
 
           {/* Record Player */}
           <button
@@ -162,8 +175,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* ================= MODALS ================= */}
 
+      {/* MODALS */}
       <AnimatePresence>
         {activeModal === 'record' && (
           <RecordPlayer
@@ -183,14 +196,12 @@ export default function App() {
         {activeModal === 'clock' && <ClockMessage onClose={() => setActiveModal(null)} />}
       </AnimatePresence>
 
-      {/* AUDIO */}
-      {selectedSong !== null && (
-        <audio
-          ref={audioRef}
-          src={songs[selectedSong].url}
-          onEnded={stopMusic}
-        />
-      )}
+      {/* IMPORTANT: Always Mounted Audio */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        onEnded={stopMusic}
+      />
 
     </div>
   );
